@@ -33,7 +33,6 @@ except ImportError:
     # Older versions of Python (i.e. 2.4) require simplejson instead of json
     import simplejson as json
 
-
 if __name__ == '__main__':
     """
     Writes the API key to api_key.txt file. It will create the file if it doesn't exist.
@@ -48,6 +47,7 @@ if __name__ == '__main__':
     """
 
     import sys
+
     if len(sys.argv) == 2 and sys.argv[1]:
         if len(sys.argv[1]) == 40:
             # write the key to the file
@@ -56,10 +56,14 @@ if __name__ == '__main__':
             f.close()
             print('Key: ' + sys.argv[1] + ' was written to api_key.txt')
             print(
-                'You are now ready to start using AlchemyAPI. For an example, run: python example.py')
+                    'You are now ready to start using AlchemyAPI. For an example, run: python example.py')
         else:
             print(
-                'The key appears to invalid. Please make sure to use the 40 character key assigned by AlchemyAPI')
+                    'The key appears to invalid. Please make sure to use the 40 character key assigned by AlchemyAPI')
+
+
+class BadApiKeyError(Exception):
+    pass
 
 
 class AlchemyAPI:
@@ -125,7 +129,7 @@ class AlchemyAPI:
     ENDPOINTS['imagetagging']['image'] = '/image/ImageGetRankedImageKeywords'
     ENDPOINTS['facetagging'] = {}
     ENDPOINTS['facetagging']['url'] = '/url/URLGetRankedImageFaceTags'
-    ENDPOINTS['facetagging']['image'] = '/image/ImageGetRankedImageFaceTags'    
+    ENDPOINTS['facetagging']['image'] = '/image/ImageGetRankedImageFaceTags'
     ENDPOINTS['taxonomy'] = {}
     ENDPOINTS['taxonomy']['url'] = '/url/URLGetRankedTaxonomy'
     ENDPOINTS['taxonomy']['html'] = '/html/HTMLGetRankedTaxonomy'
@@ -136,48 +140,40 @@ class AlchemyAPI:
 
     s = requests.Session()
 
-    def __init__(self):
+    def __init__(self, api_key=None):
         """	
         Initializes the SDK so it can send requests to AlchemyAPI for analysis.
-        It loads the API key from api_key.txt and configures the endpoints.
+        If the api_key is not supplied, it loads the API key from api_key.txt and configures the endpoints.
         """
+        if api_key:
+            self.key = self.verify_key(api_key)
+        else:
+            self.key = self.read_key_from_file()
 
-        import sys
+    def read_key_from_file(self):
         try:
             # Open the key file and read the key
-            f = open("api_key.txt", "r")
-            key = f.read().strip()
+            with open("api_key.txt", "r") as key_file:
+                return self.verify_key(key_file.read().strip())
 
-            if key == '':
-                # The key file should't be blank
-                print(
-                    'The api_key.txt file appears to be blank, please run: python alchemyapi.py YOUR_KEY_HERE')
-                print(
-                    'If you do not have an API Key from AlchemyAPI, please register for one at: http://www.alchemyapi.com/api/register.html')
-                sys.exit(0)
-            elif len(key) != 40:
-                # Keys should be exactly 40 characters long
-                print(
-                    'It appears that the key in api_key.txt is invalid. Please make sure the file only includes the API key, and it is the correct one.')
-                sys.exit(0)
-            else:
-                # setup the key
-                self.apikey = key
-
-            # Close file
-            f.close()
         except IOError:
-            # The file doesn't exist, so show the message and create the file.
-            print(
-                'API Key not found! Please run: python alchemyapi.py YOUR_KEY_HERE')
-            print(
-                'If you do not have an API Key from AlchemyAPI, please register for one at: http://www.alchemyapi.com/api/register.html')
-
             # create a blank key file
             open('api_key.txt', 'a').close()
-            sys.exit(0)
-        except Exception as e:
-            print(e)
+            raise BadApiKeyError('api_key.txt not found! Please run: python alchemyapi.py YOUR_KEY_HERE\n'
+                                 'If you do not have an API Key from AlchemyAPI, please register for one at: '
+                                 'http://www.alchemyapi.com/api/register.html')
+
+    @staticmethod
+    def verify_key(key):
+        if key.strip() == '':
+            # The key file should't be blank
+            raise BadApiKeyError(
+                    'The Alchemy API key is empty.')
+        elif len(key) != 40:
+            # Keys should be exactly 40 characters long
+            raise BadApiKeyError('It appears that the Alchemy API key is invalid (not 40 characters).')
+        else:
+            return key
 
     def entities(self, flavor, data, options={}):
         """
@@ -761,7 +757,7 @@ class AlchemyAPI:
         post_url = ""
         try:
             post_url = AlchemyAPI.BASE_URL + endpoint + \
-                '?' + urlencode(params).encode('utf-8')
+                       '?' + urlencode(params).encode('utf-8')
         except TypeError:
             post_url = AlchemyAPI.BASE_URL + endpoint + '?' + urlencode(params)
 
