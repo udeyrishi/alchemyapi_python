@@ -146,9 +146,9 @@ class AlchemyAPI:
         If the api_key is not supplied, it loads the API key from api_key.txt and configures the endpoints.
         """
         if api_key:
-            self.key = self.verify_key(api_key)
+            self.apikey = self.verify_key(api_key)
         else:
-            self.key = self.read_key_from_file()
+            self.apikey = self.read_key_from_file()
 
     def read_key_from_file(self):
         try:
